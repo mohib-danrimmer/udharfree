@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}UdharFree{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  {% if session.username %}
+  <nav class="navbar">
+    <a href="{{ url_for('dashboard') }}" class="nav-brand">UdharFree</a>
+    <div class="nav-links">
+      <span class="nav-user">{{ session.display_name }}</span>
+      <a href="{{ url_for('add_expense') }}" class="btn btn-sm btn-outline">+ Add Expense</a>
+      <a href="{{ url_for('logout') }}" class="btn btn-sm btn-ghost">Logout</a>
+    </div>
+  </nav>
+  {% endif %}
+
+  <main class="main-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

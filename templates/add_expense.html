@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Add Expense — UdharFree{% endblock %}
+
+{% block content %}
+<div class="container container-sm">
+  <a href="{{ url_for('dashboard') }}" class="back-link">&larr; Back</a>
+  <h2 class="page-title">Add Expense</h2>
+
+  <div class="card">
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('add_expense_post') }}" id="expense-form">
+
+        <div class="form-group">
+          <label for="description">Description</label>
+          <input type="text" id="description" name="description" required placeholder="e.g. Dinner at Barbeque Nation" />
+        </div>
+
+        <div class="form-group">
+          <label for="total_amount">Total Amount (₹)</label>
+          <input type="number" id="total_amount" name="total_amount" required min="0.01" step="0.01" placeholder="0.00" />
+        </div>
+
+        <div class="form-group">
+          <label for="paid_by">Paid By</label>
+          <select id="paid_by" name="paid_by" required>
+            <option value="">Select payer...</option>
+            {% for u in all_users %}
+            <option value="{{ u.username }}" {% if u.username == current_user %}selected{% endif %}>
+              {{ u.display_name }}{% if u.username == current_user %} (you){% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Split With</label>
+          <div class="member-checkboxes" id="member-checkboxes">
+            {% for u in all_users %}
+            <label class="checkbox-label">
+              <input type="checkbox" name="members" value="{{ u.username }}"
+                     {% if u.username == current_user %}checked{% endif %}
+                     data-username="{{ u.username }}" data-display="{{ u.display_name }}" />
+              <span>{{ u.display_name }}{% if u.username == current_user %} (you){% endif %}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Split Type</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="split_type" value="equal" checked id="split-equal" /> Equal
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="split_type" value="percentage" id="split-percentage" /> Percentage
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="split_type" value="exact" id="split-exact" /> Exact Amount
+            </label>
+          </div>
+        </div>
+
+        <!-- Percentage inputs -->
+        <div id="pct-inputs" class="split-inputs hidden">
+          <div class="split-input-header">
+            <span>Enter percentages (must sum to 100%)</span>
+            <span id="pct-total-display" class="split-total">Total: 0%</span>
+          </div>
+          <div id="pct-fields"></div>
+        </div>
+
+        <!-- Exact inputs -->
+        <div id="exact-inputs" class="split-inputs hidden">
+          <div class="split-input-header">
+            <span>Enter exact amounts (must sum to total)</span>
+            <span id="exact-total-display" class="split-total">Total: ₹0.00</span>
+          </div>
+          <div id="exact-fields"></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full" id="submit-btn">Add Expense</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Pass all users to app.js via a global
+  window.ALL_USERS = {{ all_users | tojson }};
+  window.CURRENT_USER = {{ current_user | tojson }};
+</script>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ expense.description }} — UdharFree{% endblock %}
+
+{% block content %}
+<div class="container container-sm">
+  <a href="{{ url_for('dashboard') }}" class="back-link">&larr; Back to Dashboard</a>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>{{ expense.description }}</h2>
+    </div>
+    <div class="card-body">
+      <div class="detail-grid">
+        <div class="detail-item">
+          <span class="detail-label">Total Amount</span>
+          <span class="detail-value amount-large">₹{{ "%.2f"|format(expense.total_amount) }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Paid By</span>
+          <span class="detail-value">{{ expense.paid_by_display }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Split Type</span>
+          <span class="detail-value">{{ expense.split_type | capitalize }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Date</span>
+          <span class="detail-value">{{ expense.created_at }}</span>
+        </div>
+      </div>
+
+      <h3 class="section-title">Split Breakdown</h3>
+      <ul class="split-list">
+        {% for s in split_list %}
+        <li class="split-item">
+          <div class="balance-avatar">{{ s.display_name[0].upper() }}</div>
+          <span class="split-name">{{ s.display_name }}</span>
+          <span class="split-amount">₹{{ "%.2f"|format(s.amount_owed) }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

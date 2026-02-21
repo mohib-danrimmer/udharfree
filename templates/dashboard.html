@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — UdharFree{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="page-title">Dashboard</h2>
+
+  <!-- Summary cards -->
+  <div class="summary-grid">
+    <div class="summary-card summary-green">
+      <div class="summary-label">You are owed</div>
+      <div class="summary-amount">₹{{ "%.2f"|format(total_owed_to_me) }}</div>
+    </div>
+    <div class="summary-card summary-red">
+      <div class="summary-label">You owe</div>
+      <div class="summary-amount">₹{{ "%.2f"|format(total_i_owe) }}</div>
+    </div>
+  </div>
+
+  <!-- Balances -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Balances</h3>
+    </div>
+    <div class="card-body">
+      {% if balance_list %}
+        <ul class="balance-list">
+          {% for b in balance_list %}
+          <li class="balance-item">
+            <div class="balance-avatar">{{ b.display_name[0].upper() }}</div>
+            <div class="balance-info">
+              <span class="balance-name">{{ b.display_name }}</span>
+              {% if b.amount > 0 %}
+                <span class="balance-amount balance-positive">owes you ₹{{ "%.2f"|format(b.amount) }}</span>
+              {% else %}
+                <span class="balance-amount balance-negative">you owe ₹{{ "%.2f"|format(-b.amount) }}</span>
+              {% endif %}
+            </div>
+            {% if b.amount < 0 %}
+              <a href="{{ url_for('settle') }}?user={{ b.username }}" class="btn btn-sm btn-primary">Settle Up</a>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="empty-state">All settled up! No outstanding balances.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Recent Expenses -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Recent Expenses</h3>
+      <a href="{{ url_for('add_expense') }}" class="btn btn-sm btn-primary">+ Add</a>
+    </div>
+    <div class="card-body">
+      {% if recent_expenses %}
+        <ul class="expense-list">
+          {% for e in recent_expenses %}
+          <li class="expense-item">
+            <a href="{{ url_for('expense_detail', expense_id=e.expense_id) }}" class="expense-link">
+              <div class="expense-icon">₹</div>
+              <div class="expense-info">
+                <span class="expense-desc">{{ e.description }}</span>
+                <span class="expense-meta">Paid by {{ e.paid_by }} &middot; {{ e.created_at }}</span>
+              </div>
+              <div class="expense-total">₹{{ "%.2f"|format(e.total_amount) }}</div>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="empty-state">No expenses yet. <a href="{{ url_for('add_expense') }}">Add one!</a></p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

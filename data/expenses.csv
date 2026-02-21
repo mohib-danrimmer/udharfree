@@ -1,0 +1,3 @@
+expense_id,description,total_amount,paid_by,split_type,created_by,created_at
+8cc967e0,Dinner,100.0,othermohib,exact,othermohib,2026-02-20 12:26:49
+c72d019f,pots,150.0,othermohib,equal,othermohib,2026-02-20 12:28:41
