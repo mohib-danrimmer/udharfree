@@ -25,7 +25,7 @@ db = client["udharfree-db"]
 users_collection = db["users"]
 settlements_collection = db["settlements"]
 expenses_collection = db["expenses"]
-expense_splits_collections = db["expense_splits"]
+expense_splits_collection = db["expense_splits"]
 
 
 
@@ -53,7 +53,7 @@ def read_expenses() -> pd.DataFrame:
 
 
 def read_splits() -> pd.DataFrame:
-    cursor = expense_splits_collections.find({})
+    cursor = expense_splits_collection.find({})
     df = pd.DataFrame(list(cursor))
     if not df.empty:
         df["amount_owed"] = df["amount_owed"].astype(float)
