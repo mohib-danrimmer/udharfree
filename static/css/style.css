@@ -113,6 +113,9 @@ body {
 .btn-ghost    { background: transparent; color: var(--gray-600); }
 .btn-sm       { padding: 0.375rem 0.75rem; font-size: 0.8125rem; }
 .btn-full     { width: 100%; }
+.delete-btn   { font-family: inherit; font-size: 16px; font-style: inherit; font-weight: inherit; background-color:#9d0b0b; color: white; border:1px solid #9d0b0b; padding: 5px 20px; flex: 1 0 0; border-radius: 8px;}
+
+.remove-div   {display: flex; justify-content: center; margin-top: 20px;} 
 
 /* ---- Card ---- */
 .card {

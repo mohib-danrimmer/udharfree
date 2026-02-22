@@ -7,62 +7,62 @@ import pandas as pd
 from flask import (Flask, flash, jsonify, redirect, render_template, request,
                    session, url_for)
 from werkzeug.security import check_password_hash, generate_password_hash
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "udharfree-dev-secret-2024")
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+MONGO_URI = os.environ.get("MONGO_URI")
 
-USERS_CSV = os.path.join(DATA_DIR, "users.csv")
-EXPENSES_CSV = os.path.join(DATA_DIR, "expenses.csv")
-SPLITS_CSV = os.path.join(DATA_DIR, "expense_splits.csv")
-SETTLEMENTS_CSV = os.path.join(DATA_DIR, "settlements.csv")
+client = MongoClient(MONGO_URI)
+db = client["udharfree-db"]
 
 
-# ---------------------------------------------------------------------------
-# CSV initialisation
-# ---------------------------------------------------------------------------
 
-def init_data_files():
-    os.makedirs(DATA_DIR, exist_ok=True)
+# 3. Fetch all documents from the collections
+users_collection = db["users"]
+settlements_collection = db["settlements"]
+expenses_collection = db["expenses"]
+expense_splits_collections = db["expense_splits"]
 
-    if not os.path.exists(USERS_CSV):
-        pd.DataFrame(columns=["username", "display_name", "password_hash", "created_at"]).to_csv(USERS_CSV, index=False)
-
-    if not os.path.exists(EXPENSES_CSV):
-        pd.DataFrame(columns=["expense_id", "description", "total_amount", "paid_by", "split_type", "created_by", "created_at"]).to_csv(EXPENSES_CSV, index=False)
-
-    if not os.path.exists(SPLITS_CSV):
-        pd.DataFrame(columns=["split_id", "expense_id", "username", "amount_owed"]).to_csv(SPLITS_CSV, index=False)
-
-    if not os.path.exists(SETTLEMENTS_CSV):
-        pd.DataFrame(columns=["settlement_id", "from_user", "to_user", "amount", "created_at"]).to_csv(SETTLEMENTS_CSV, index=False)
 
 
 # ---------------------------------------------------------------------------
-# CSV helpers
+# CSV initialisation - Entire Section Removed post migration to MonogDB
+# ---------------------------------------------------------------------------
+
+
+
+# ---------------------------------------------------------------------------
+# MongoDB helpers
 # ---------------------------------------------------------------------------
 
 def read_users() -> pd.DataFrame:
-    return pd.read_csv(USERS_CSV)
+    cursor = users_collection.find({})
+    return pd.DataFrame(list(cursor))
 
 
 def read_expenses() -> pd.DataFrame:
-    df = pd.read_csv(EXPENSES_CSV)
+    cursor = expenses_collection.find({})
+    df = pd.DataFrame(list(cursor))
     if not df.empty:
         df["total_amount"] = df["total_amount"].astype(float)
     return df
 
 
 def read_splits() -> pd.DataFrame:
-    df = pd.read_csv(SPLITS_CSV)
+    cursor = expense_splits_collections.find({})
+    df = pd.DataFrame(list(cursor))
     if not df.empty:
         df["amount_owed"] = df["amount_owed"].astype(float)
     return df
 
 
 def read_settlements() -> pd.DataFrame:
-    df = pd.read_csv(SETTLEMENTS_CSV)
+    cursor = settlements_collection.find({})
+    df = pd.DataFrame(list(cursor))
     if not df.empty:
         df["amount"] = df["amount"].astype(float)
     return df
@@ -195,13 +195,16 @@ def register():
         flash("Username already taken.", "error")
         return redirect(url_for("login"))
 
-    new_row = pd.DataFrame([{
+    # 1. Store your data in a standard Python dictionary
+    new_user_document = {
         "username": username,
         "display_name": display_name,
         "password_hash": generate_password_hash(password),
-        "created_at": now_str(),
-    }])
-    new_row.to_csv(USERS_CSV, mode="a", header=False, index=False)
+        "created_at": now_str()
+    }
+
+    # 2. Insert the dictionary directly into the active MongoDB collection
+    users_collection.insert_one(new_user_document)
 
     flash("Account created! Please log in.", "success")
     return redirect(url_for("login"))
@@ -357,7 +360,7 @@ def add_expense_post():
 
     # Persist expense
     expense_id = new_id()
-    expense_row = pd.DataFrame([{
+    expense_row = {
         "expense_id": expense_id,
         "description": description,
         "total_amount": total_amount,
@@ -365,8 +368,8 @@ def add_expense_post():
         "split_type": split_type,
         "created_by": session["username"],
         "created_at": now_str(),
-    }])
-    expense_row.to_csv(EXPENSES_CSV, mode="a", header=False, index=False)
+    }
+    expenses_collection.insert_one(expense_row)
 
     # Persist splits
     split_rows = []
@@ -377,7 +380,9 @@ def add_expense_post():
             "username": username,
             "amount_owed": amount_owed,
         })
-    pd.DataFrame(split_rows).to_csv(SPLITS_CSV, mode="a", header=False, index=False)
+    # Good practice to check if the list has items before inserting
+    if split_rows:
+        expense_splits_collection.insert_many(split_rows)
 
     flash("Expense added successfully!", "success")
     return redirect(url_for("dashboard"))
@@ -470,18 +475,92 @@ def settle_post():
         flash("Enter a valid positive amount.", "error")
         return redirect(url_for("settle"))
 
-    row = pd.DataFrame([{
+    row = {
         "settlement_id": new_id(),
         "from_user": current_user,
         "to_user": to_user,
         "amount": amount,
         "created_at": now_str(),
-    }])
-    row.to_csv(SETTLEMENTS_CSV, mode="a", header=False, index=False)
+    }
+    settlements_collection.insert_one(row)
 
     flash(f"Settlement of ₹{amount:.2f} recorded!", "success")
     return redirect(url_for("dashboard"))
 
+# ---------------------------------------------------------------------------
+# Routes — Delete Expense - OLD
+# ---------------------------------------------------------------------------
+
+# @app.route("/api/expenses/<expense_id>", methods=["DELETE"])
+# @login_required
+# def delete_expense(expense_id):
+#     current_user = session["username"]
+
+#     # 1. Load the current data
+
+#     expenses = db["expenses"]
+#     expense_splits = db["expense_splits"]
+#     expense_df = pd.DataFrame(list(expenses.find({})))
+#     splits_df = pd.DataFrame(list(expense_splits.find({})))
+
+#     # 2. Verify the expense actually exists
+#     if expense_df.empty or expense_id not in expense_df["expense_id"].values:
+#         return jsonify({"success": False, "error": "Expense not found."}), 404
+
+#     # Optional Security: Only allow the person who created the expense to delete it
+#     # expense_row = expenses[expenses["expense_id"] == expense_id].iloc[0]
+#     # if expense_row["created_by"] != current_user:
+#     #     return jsonify({"success": False, "error": "You can only delete your own expenses."}), 403
+
+#     # 3. Filter OUT the expense (Keep everything where the ID does NOT match)
+#     expenses_updated = expense_df[expense_df["expense_id"] != expense_id]
+#     splits_updated = splits_df[splits_df["expense_id"] != expense_id]
+#     new_expenses_data = expenses_updated.to_dict(orient="records")
+#     new_splits_data = splits_updated.to_dict(orient="records")
+
+#     # 4. Save the updated dataframes back to MongoDB
+    
+#     if new_expenses_data:
+#         expenses.delete_many({})
+#         expenses.insert_many(new_expenses_data)
+#     if new_splits_data:
+#         expense_splits.delete_many({})
+#         expense_splits.insert_many(new_splits_data)
+#     return jsonify({"success": True, "message": "Expense and associated splits removed successfully."}), 200
+
+
+# ---------------------------------------------------------------------------
+# Routes — Delete Expense - REVAMPED
+# ---------------------------------------------------------------------------
+
+@app.route("/api/expenses/<expense_id>", methods=["DELETE"])
+@login_required
+def delete_expense(expense_id):
+    current_user = session["username"]
+
+    expenses = db["expenses"]
+    expense_splits = db["expense_splits"]
+
+    # Optional Security: Verify ownership before deleting
+    # expense_doc = expenses.find_one({"expense_id": expense_id})
+    # if not expense_doc:
+    #     return jsonify({"success": False, "error": "Expense not found."}), 404
+    # if expense_doc["created_by"] != current_user:
+    #     return jsonify({"success": False, "error": "You can only delete your own expenses."}), 403
+
+    # 1. Delete the specific expense from the expenses collection
+    # delete_one finds the first document that matches your criteria and drops it
+    result = expenses.delete_one({"expense_id": expense_id})
+
+    # 2. Verify the expense actually existed and was deleted
+    if result.deleted_count == 0:
+        return jsonify({"success": False, "error": "Expense not found."}), 404
+
+    # 3. Delete ALL matching splits from the expense_splits collection
+    # delete_many finds every document that matches your criteria and drops them
+    # expense_splits.delete_many({"expense_id": expense_id})
+
+    return jsonify({"success": True, "message": "Expense and associated splits removed successfully."}), 200
 
 # ---------------------------------------------------------------------------
 # API
@@ -501,5 +580,4 @@ def api_users():
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    init_data_files()
     app.run(debug=True, host="0.0.0.0", port=5000)
