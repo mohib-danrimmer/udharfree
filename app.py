@@ -247,7 +247,7 @@ def dashboard():
     recent_expenses = []
     if not expenses.empty:
         expenses["created_at"] = pd.to_datetime(expenses["created_at"])
-        expenses = expenses.sort_values("created_at", ascending=False).head(10)
+        expenses = expenses.sort_values("created_at", ascending=False)
         for _, row in expenses.iterrows():
             recent_expenses.append({
                 "expense_id": row["expense_id"],
