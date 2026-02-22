@@ -558,7 +558,7 @@ def delete_expense(expense_id):
 
     # 3. Delete ALL matching splits from the expense_splits collection
     # delete_many finds every document that matches your criteria and drops them
-    # expense_splits.delete_many({"expense_id": expense_id})
+    expense_splits.delete_many({"expense_id": expense_id})
 
     return jsonify({"success": True, "message": "Expense and associated splits removed successfully."}), 200
 
